@@ -21,6 +21,7 @@ import {
   Copy,
   Check,
   ChevronUp,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -129,6 +130,13 @@ export function MiningDashboard() {
     if (!userId) return;
     try {
       const res = await fetch(`/api/stats?userId=${userId}`);
+      // AUTO-RECOVERY: if user not found (stale session from old memory-store era),
+      // clear localStorage and force re-login instead of spinning forever
+      if (res.status === 404) {
+        console.warn("[ritual] User not found in DB, clearing stale session");
+        logout();
+        return;
+      }
       if (!res.ok) return;
       const data: Stats = await res.json();
       setStats(data);
@@ -145,7 +153,7 @@ export function MiningDashboard() {
     } catch {
       // silent
     }
-  }, [userId, activeMinerId]);
+  }, [userId, activeMinerId, logout]);
 
   const loadRecords = useCallback(async () => {
     if (!userId) return;
@@ -405,20 +413,38 @@ export function MiningDashboard() {
         }}
       />
 
-      {/* ===== STICKY TOP HEADER — Ritual BTC balance + wallet address ===== */}
-      <div className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-zinc-900">
-        <div className="max-w-md mx-auto px-3 py-2.5 flex items-center justify-between gap-2">
-          {/* LEFT: Ritual BTC balance (always visible) */}
+      {/* ===== STICKY TOP HEADER — Twitter avatar + Ritual BTC balance + wallet ===== */}
+      <div className="sticky top-0 z-30 bg-black/95 backdrop-blur-md border-b border-zinc-900">
+        <div className="max-w-md mx-auto px-3 py-2 flex items-center justify-between gap-2">
+          {/* LEFT: Twitter avatar + handle + Ritual BTC balance */}
           <div className="flex items-center gap-2 min-w-0">
-            <div className="size-7 rounded-md bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
-              <Zap className="size-3.5 text-emerald-400" fill="currentColor" />
+            {/* Twitter avatar (via unavatar.io — free, no API key) */}
+            <div className="relative shrink-0">
+              <img
+                src={`https://unavatar.io/twitter/${stats.user.twitterId}?fallback=https://ui-avatars.com/api/?name=${stats.user.twitterId}&background=064e3b&color=34d399&size=64`}
+                alt={`@${stats.user.twitterId}`}
+                className="size-9 rounded-full border-2 border-emerald-500/40 object-cover bg-zinc-800"
+                onError={(e) => {
+                  // fallback to letter avatar if unavatar fails
+                  const t = e.currentTarget;
+                  t.src = `https://ui-avatars.com/api/?name=${stats.user.twitterId[0]?.toUpperCase() || "R"}&background=064e3b&color=34d399&size=64&bold=true`;
+                }}
+              />
+              {/* online dot */}
+              <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-emerald-400 border-2 border-black" />
             </div>
             <div className="min-w-0">
-              <div className="text-[8px] font-mono text-zinc-600 tracking-widest leading-tight">
-                RITUAL BTC
+              <div className="flex items-center gap-1 leading-tight">
+                <span className="text-xs font-bold text-white truncate max-w-[100px]">
+                  @{stats.user.twitterId}
+                </span>
               </div>
-              <div className="text-sm font-black text-emerald-400 font-mono leading-tight truncate">
-                {formatSats(stats.user.totalRitualBtc)}
+              <div className="flex items-center gap-1 leading-tight">
+                <Zap className="size-2.5 text-emerald-400 shrink-0" fill="currentColor" />
+                <span className="text-sm font-black text-emerald-400 font-mono">
+                  {formatSats(stats.user.totalRitualBtc)}
+                </span>
+                <span className="text-[8px] text-zinc-600 font-mono">RBTC</span>
               </div>
             </div>
           </div>
@@ -452,6 +478,36 @@ export function MiningDashboard() {
                   onClick={() => setWalletMenuOpen(false)}
                 />
                 <div className="absolute right-0 top-11 z-50 w-72 rounded-lg border border-zinc-800 bg-zinc-950 shadow-2xl p-3 space-y-3">
+                  {/* Twitter profile */}
+                  <div className="flex items-center gap-2 pb-2 border-b border-zinc-800">
+                    <img
+                      src={`https://unavatar.io/twitter/${stats.user.twitterId}?fallback=https://ui-avatars.com/api/?name=${stats.user.twitterId}&background=064e3b&color=34d399&size=64`}
+                      alt={`@${stats.user.twitterId}`}
+                      className="size-10 rounded-full border border-emerald-500/40 object-cover bg-zinc-800"
+                      onError={(e) => {
+                        const t = e.currentTarget;
+                        t.src = `https://ui-avatars.com/api/?name=${stats.user.twitterId[0]?.toUpperCase() || "R"}&background=064e3b&color=34d399&size=64&bold=true`;
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-white truncate">
+                        @{stats.user.twitterId}
+                      </div>
+                      <div className="text-[10px] text-emerald-400 font-mono">
+                        {formatSats(stats.user.totalRitualBtc)} RBTC
+                      </div>
+                    </div>
+                    <a
+                      href={`https://twitter.com/${stats.user.twitterId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="size-7 rounded-md flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-900 shrink-0"
+                      title="Open Twitter profile"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  </div>
+                  {/* Wallet address */}
                   <div>
                     <div className="text-[9px] font-mono text-zinc-500 tracking-widest mb-1">
                       CONNECTED WALLET
@@ -472,10 +528,7 @@ export function MiningDashboard() {
                       </button>
                     </div>
                   </div>
-                  <div className="pt-2 border-t border-zinc-800 flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-zinc-500">
-                      @{stats.user.twitterId}
-                    </span>
+                  <div className="pt-2 border-t border-zinc-800 flex items-center justify-end">
                     <button
                       onClick={() => {
                         setWalletMenuOpen(false);
