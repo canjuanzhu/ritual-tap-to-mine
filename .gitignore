@@ -52,3 +52,15 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# Local SQLite DB (regenerated via prisma db push)
+db/*.db
+db/*.db-journal
+
+# Screenshots from testing
+/download/
+
+# z.ai scaffold internal
+/.zscripts/
+/worklog.md
+/agent-ctx/
