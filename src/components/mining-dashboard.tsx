@@ -17,6 +17,10 @@ import {
   Gauge,
   TrendingUp,
   Sparkles,
+  Wallet,
+  Copy,
+  Check,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -112,6 +116,8 @@ export function MiningDashboard() {
   const [floatingRewards, setFloatingRewards] = useState<FloatingReward[]>([]);
   const [nextEnergyMs, setNextEnergyMs] = useState(0);
   const [halvingFlash, setHalvingFlash] = useState(false);
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [walletCopied, setWalletCopied] = useState(false);
   const rewardIdRef = useRef(0);
   const lastEnergyRef = useRef({ at: Date.now(), energy: 100 });
   const tapLockRef = useRef(false);
@@ -329,6 +335,13 @@ export function MiningDashboard() {
     }
   }
 
+  function copyWallet() {
+    if (!stats) return;
+    navigator.clipboard.writeText(stats.user.walletAddress);
+    setWalletCopied(true);
+    setTimeout(() => setWalletCopied(false), 1500);
+  }
+
   if (!stats) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -343,6 +356,7 @@ export function MiningDashboard() {
     leaderboard.findIndex((l) => l.isYou) !== -1
       ? leaderboard.findIndex((l) => l.isYou) + 1
       : null;
+  const shortWallet = `${stats.user.walletAddress.slice(0, 6)}...${stats.user.walletAddress.slice(-4)}`;
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
@@ -391,74 +405,113 @@ export function MiningDashboard() {
         }}
       />
 
-      <div className="relative z-10 max-w-md mx-auto px-4 pt-6 pb-32">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/5">
-              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] font-mono text-emerald-300 tracking-widest">
-                LIVE
-              </span>
+      {/* ===== STICKY TOP HEADER — Ritual BTC balance + wallet address ===== */}
+      <div className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-zinc-900">
+        <div className="max-w-md mx-auto px-3 py-2.5 flex items-center justify-between gap-2">
+          {/* LEFT: Ritual BTC balance (always visible) */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="size-7 rounded-md bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <Zap className="size-3.5 text-emerald-400" fill="currentColor" />
             </div>
-            <span className="text-xs font-mono text-zinc-500">
-              @{stats.user.twitterId}
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              logout();
-            }}
-            className="size-8 text-zinc-500 hover:text-white"
-          >
-            <LogOut className="size-3.5" />
-          </Button>
-        </div>
-
-        {/* Balance card */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-zinc-800 bg-zinc-950/60 backdrop-blur p-4 mb-4 relative overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono text-zinc-500 tracking-widest">
-              YOUR RITUAL BTC BALANCE
-            </span>
-            <Badge
-              variant="outline"
-              className="text-[9px] font-mono border-zinc-700 text-zinc-400"
-            >
-              OFF-CHAIN
-            </Badge>
-          </div>
-          <div className="flex items-end gap-2">
-            <span className="text-4xl font-black tracking-tighter">
-              {formatSats(stats.user.totalRitualBtc)}
-            </span>
-            <span className="text-xs text-zinc-500 font-mono mb-1.5">
-              ≈ {(stats.user.totalRitualBtc / 1e8).toFixed(8)} RBTC
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-zinc-900">
-            <div>
-              <div className="text-[9px] font-mono text-zinc-600">TAPS</div>
-              <div className="text-sm font-bold">{stats.user.totalTaps.toLocaleString()}</div>
-            </div>
-            <div>
-              <div className="text-[9px] font-mono text-zinc-600">HASH</div>
-              <div className="text-sm font-bold">{stats.totalHashPower} TH/s</div>
-            </div>
-            <div>
-              <div className="text-[9px] font-mono text-zinc-600">RANK</div>
-              <div className="text-sm font-bold">
-                {myRank ? `#${myRank}` : "—"}
+            <div className="min-w-0">
+              <div className="text-[8px] font-mono text-zinc-600 tracking-widest leading-tight">
+                RITUAL BTC
+              </div>
+              <div className="text-sm font-black text-emerald-400 font-mono leading-tight truncate">
+                {formatSats(stats.user.totalRitualBtc)}
               </div>
             </div>
           </div>
-        </motion.div>
+
+          {/* RIGHT: Wallet address button */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setWalletMenuOpen((v) => !v)}
+              className="flex items-center gap-1.5 h-9 px-2.5 rounded-lg border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 hover:border-zinc-700 transition-colors"
+            >
+              <Wallet className="size-3.5 text-zinc-400" />
+              <span className="text-[11px] font-mono text-zinc-300 hidden sm:inline">
+                {shortWallet}
+              </span>
+              <span className="text-[11px] font-mono text-zinc-300 sm:hidden">
+                {stats.user.walletAddress.slice(0, 4)}...{stats.user.walletAddress.slice(-2)}
+              </span>
+              {walletMenuOpen ? (
+                <ChevronUp className="size-3 text-zinc-500" />
+              ) : (
+                <ChevronDown className="size-3 text-zinc-500" />
+              )}
+            </button>
+
+            {/* Wallet dropdown */}
+            {walletMenuOpen && (
+              <>
+                {/* Click-away catcher */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setWalletMenuOpen(false)}
+                />
+                <div className="absolute right-0 top-11 z-50 w-72 rounded-lg border border-zinc-800 bg-zinc-950 shadow-2xl p-3 space-y-3">
+                  <div>
+                    <div className="text-[9px] font-mono text-zinc-500 tracking-widest mb-1">
+                      CONNECTED WALLET
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-[10px] font-mono text-emerald-400 break-all leading-tight">
+                        {stats.user.walletAddress}
+                      </code>
+                      <button
+                        onClick={copyWallet}
+                        className="size-7 rounded-md flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-900 shrink-0"
+                      >
+                        {walletCopied ? (
+                          <Check className="size-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="size-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-zinc-800 flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      @{stats.user.twitterId}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setWalletMenuOpen(false);
+                        logout();
+                      }}
+                      className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 hover:text-red-400 transition-colors"
+                    >
+                      <LogOut className="size-3" /> DISCONNECT
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 max-w-md mx-auto px-4 pt-4 pb-32">
+        {/* Mini status row (live + taps + rank) */}
+        <div className="flex items-center justify-between mb-3 text-[10px] font-mono">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/5">
+            <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-emerald-300 tracking-widest">LIVE</span>
+          </div>
+          <div className="flex items-center gap-3 text-zinc-500">
+            <span>
+              TAPS <span className="text-white font-bold">{stats.user.totalTaps.toLocaleString()}</span>
+            </span>
+            <span>
+              HASH <span className="text-white font-bold">{stats.totalHashPower} TH/s</span>
+            </span>
+            <span>
+              RANK <span className="text-emerald-400 font-bold">{myRank ? `#${myRank}` : "—"}</span>
+            </span>
+          </div>
+        </div>
 
         {/* Mining arena */}
         <div className="relative rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-950/80 to-black p-4 mb-4">
