@@ -1,146 +1,219 @@
-# Ritual · Tap-to-Mine
+# Ritual · Tap-to-Mine ⛏️
 
-> Gen Z's own bitcoin miner. Tap the rig, earn Ritual BTC.
-> Bitcoin-style halving economy · 5 ASIC miner tiers · off-chain points · per-user mining records.
+**Gen Z's own bitcoin miner.** Tap your phone, mine Ritual BTC.
 
-Built with Next.js 16 · TypeScript · Tailwind CSS · Prisma · Framer Motion.
+Built on the [Ritual.net](https://ritual.net) aesthetic — pure black, neon emerald, monospace, grid background, bitcoin-style economy.
 
----
-
-## Features
-
-- **Twitter + Wallet login** — one Twitter ID + one wallet = one account. MetaMask auto-connect with manual fallback.
-- **5 Miner Tiers** (bitcoin ASIC-inspired SVG visuals with animated fans, LED strips, cooling fins):
-  | Tier | Name | Price | Hash | Per Tap | Passive / hr |
-  |------|------|-------|------|---------|--------------|
-  | S1 | Genesis | **FREE** | 1 TH/s | 5 sats | 30 |
-  | S2 | Scout | 0.1 RITUAL | 5 TH/s | 25 sats | 150 |
-  | S9 | Veteran | 0.2 RITUAL | 15 TH/s | 80 sats | 480 |
-  | S19 | Pro | 0.3 RITUAL | 50 TH/s | 280 sats | 1,680 |
-  | S21 | Apex | 0.4 RITUAL | 150 TH/s | 900 sats | 5,400 |
-- **Tap-to-Mine** — tap the rig, earn satoshis (off-chain, not on-chain).
-- **Bitcoin Economy** — global block height increments per tap, block reward starts at 50 RBTC, **halves every 21,000 blocks**, 21M supply cap, halving flash animation.
-- **Energy System** — 100 max, -1 per tap, regenerates +1 every 12s with live countdown.
-- **Passive Income** — paid miners accrue sats per hour (8h cap), one-tap claim.
-- **Per-user Mining Records** — every tap logged with miner tier, block height, reward, timestamp.
-- **Leaderboard** — global ranking by total Ritual BTC, current user highlighted.
-- **Ritual Payment Receiver** — on-chain RITUAL payments go to:
-  `0x29337E84E6bD3C6cC1B766ab9E69CDF5BBb5AC7d`
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcanjuanzhu%2Fritual-tap-to-mine&env=DATABASE_URL,DATABASE_AUTH_TOKEN&envDescription=Turso%20libSQL%20database%20URL%20and%20auth%20token&project-name=ritual-tap-to-mine&repository-name=ritual-tap-to-mine)
 
 ---
 
-## Local Development
+## ✨ Features
+
+- **One-tap login** — Twitter ID + wallet address (MetaMask auto-connect or manual)
+- **5 Miner Tiers** (bitcoin ASIC-inspired with animated fans, LED strips, cooling fins):
+
+  | Tier | Name    | Price       | Hash Power | /Tap    | Passive/hr |
+  |------|---------|-------------|------------|---------|------------|
+  | S1   | Genesis | **FREE**    | 1 TH/s     | 5 sats  | 30         |
+  | S2   | Scout   | 0.1 RITUAL  | 5 TH/s     | 25 sats | 150        |
+  | S9   | Veteran | 0.2 RITUAL  | 15 TH/s    | 80 sats | 480        |
+  | S19  | Pro     | 0.3 RITUAL  | 50 TH/s    | 280 sats| 1,680      |
+  | S21  | Apex    | 0.4 RITUAL  | 150 TH/s   | 900 sats| 5,400      |
+
+- **Bitcoin-Style Economy**
+  - Block reward starts at 50 RBTC, halves every 21,000 blocks
+  - Total supply cap: 21,000,000 RBTC
+  - Per-tap mining luck (±5% variance)
+  - Halving event flash animation
+- **Energy System** — 100 max, -1 per tap, regenerates +1 per 12 seconds
+- **Passive Income** — paid miners accrue sats per hour (8h cap), one-tap claim
+- **Off-chain Points** — Ritual BTC stored as satoshis in database, not on-chain
+- **Per-user Mining Records** — every tap logged with block height + timestamp
+- **Global Leaderboard** — ranks all miners by total Ritual BTC
+- **Real Ritual Payment Address** — `0x29337E84E6bD3C6cC1B766ab9E69CDF5BBb5AC7d`
+
+---
+
+## 🛠 Tech Stack
+
+- **Framework**: Next.js 16 (App Router) + TypeScript 5
+- **Styling**: Tailwind CSS 4 + shadcn/ui (New York)
+- **Database**: Prisma ORM + SQLite (local) / Turso libSQL (production)
+- **Animations**: Framer Motion
+- **State**: Zustand (session persistence)
+- **Icons**: Lucide React
+
+The `src/lib/db.ts` auto-detects the `DATABASE_URL` scheme — uses the libSQL adapter for `libsql://` / `https://` URLs (Turso / Vercel), and the default Prisma client for `file:` URLs (local SQLite). Same code, both environments.
+
+---
+
+## 🚀 Deploy to Vercel (5 minutes)
+
+The fastest path uses **Turso** (free serverless SQLite — perfect for Vercel).
+
+### Step 1 — Push to GitHub
+
+This repo is already at `github.com/canjuanzhu/ritual-tap-to-mine`. If you forked it, push to your own account first.
+
+### Step 2 — Create a free Turso database
+
+1. Sign up at [turso.tech](https://turso.tech) (free, no credit card)
+2. Create a database:
+   ```bash
+   # install turso cli
+   curl -sSfL https://get.tur.so/install.sh | bash
+
+   # sign in + create db
+   turso auth login
+   turso db create ritual-mining
+
+   # get your connection URL + auth token
+   turso db show ritual-mining --url
+   turso db tokens create ritual-mining
+   ```
+
+You'll get two values:
+- `DATABASE_URL` — looks like `libsql://ritual-mining-<your-name>.turso.io`
+- `DATABASE_AUTH_TOKEN` — a long JWT token
+
+### Step 3 — Import to Vercel
+
+1. Go to [vercel.com/new](https://vercel.com/new)
+2. Import the GitHub repo `canjuanzhu/ritual-tap-to-mine`
+3. In **Configure Project → Environment Variables**, add:
+   - `DATABASE_URL` = your Turso URL from Step 2
+   - `DATABASE_AUTH_TOKEN` = your Turso token from Step 2
+4. Click **Deploy** — Vercel runs `prisma generate && next build` automatically (see `vercel.json`)
+
+### Step 4 — Initialize the database schema
+
+After the first deploy, push the Prisma schema to your Turso DB:
 
 ```bash
-# 1. Install deps
-bun install   # or npm install / pnpm install
+# clone + install locally
+git clone https://github.com/canjuanzhu/ritual-tap-to-mine.git
+cd ritual-tap-to-mine
+bun install
 
-# 2. Set up the database (SQLite for local dev)
-echo 'DATABASE_URL="file:./db/custom.db"' > .env
+# create a .env file with your Turso credentials
+echo 'DATABASE_URL="libsql://your-db.turso.io"' > .env
+echo 'DATABASE_AUTH_TOKEN="your-token"' >> .env
+
+# push schema
 bun run db:push
+```
 
-# 3. Start dev server
+Your app is now live at `https://ritual-tap-to-mine.vercel.app` 🎉
+
+---
+
+## 💻 Run Locally
+
+### Prerequisites
+
+- [Bun](https://bun.sh) runtime (or Node.js 18+)
+- (Optional) [Turso CLI](https://turso.tech) for cloud DB
+
+### Setup with local SQLite (fastest)
+
+```bash
+# 1. Clone
+git clone https://github.com/canjuanzhu/ritual-tap-to-mine.git
+cd ritual-tap-to-mine
+
+# 2. Install
+bun install
+
+# 3. Configure local SQLite
+cp .env.example .env
+# .env should contain: DATABASE_URL="file:./db/custom.db"
+
+# 4. Push schema + start dev server
+bun run db:push
 bun run dev
-# → http://localhost:3000
+```
+
+Open `http://localhost:3000`.
+
+### Setup with Turso (mirrors production)
+
+```bash
+# Same as above, but in .env use:
+DATABASE_URL="libsql://your-db.turso.io"
+DATABASE_AUTH_TOKEN="your-turso-token"
 ```
 
 ---
 
-## Deploy to Vercel
-
-> ⚠️ **Important:** Vercel's serverless filesystem is read-only in production.
-> The local SQLite file (`db/custom.db`) **will not persist** on Vercel.
-> You MUST use a serverless-friendly database. Two options below.
-
-### Option A — Turso (libSQL, recommended)
-
-Turso is SQLite-compatible — your existing Prisma schema works with **zero changes**.
-
-1. Sign up at [turso.tech](https://turso.tech) (free tier: 500 DBs, 9 GB).
-2. Create a database:
-   ```bash
-   pip install turso
-   turso auth login
-   turso db create ritual-mining
-   turso db tokens create ritual-mining   # → prints a token
-   turso db show ritual-mining --url      # → prints libsql://... URL
-   ```
-3. In Vercel, set these env vars:
-   ```
-   DATABASE_URL=libsql://ritual-mining-<your-user>.turso.io?authToken=<token>
-   ```
-4. Update `prisma/schema.prisma` datasource to use libSQL:
-   ```prisma
-   datasource db {
-     provider = "sqlite"
-     url      = env("DATABASE_URL")
-   }
-   ```
-   (Already SQLite — no change needed. Prisma 6 supports libSQL URLs natively.)
-5. Run `bun run db:push` once locally with the Turso URL to create tables.
-6. Deploy on Vercel — done!
-
-### Option B — Vercel Postgres (PostgreSQL)
-
-1. In Vercel dashboard → Storage → Create Database → Postgres (free tier).
-2. Vercel auto-sets `DATABASE_URL` and `POSTGRES_PRISMA_URL`.
-3. Change `prisma/schema.prisma`:
-   ```prisma
-   datasource db {
-     provider = "postgresql"
-     url      = env("DATABASE_URL")
-   }
-   ```
-4. Run `bun run db:push` to create tables on the new Postgres.
-5. Deploy — done.
-
----
-
-## Tech Stack
-
-| Layer | Tech |
-|-------|------|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript 5 |
-| Styling | Tailwind CSS 4 + shadcn/ui |
-| Database | Prisma ORM (SQLite locally, Turso/Postgres on Vercel) |
-| Animations | Framer Motion |
-| State | Zustand (session) |
-| Icons | Lucide |
-
----
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 src/
 ├── app/
-│   ├── api/                  # API routes (auth, miners, mine/tap, mine/claim, stats, records, leaderboard)
-│   ├── layout.tsx            # Root layout with Ritual branding
-│   ├── page.tsx              # Login ↔ Dashboard router
+│   ├── api/
+│   │   ├── auth/route.ts         # POST /api/auth — login
+│   │   ├── miners/route.ts       # GET /api/miners — list / POST — buy
+│   │   ├── mine/tap/route.ts     # POST — tap to mine
+│   │   ├── mine/claim/route.ts   # POST — claim passive income
+│   │   ├── stats/route.ts        # GET — user + global stats
+│   │   ├── records/route.ts      # GET — mining history
+│   │   └── leaderboard/route.ts  # GET — global top miners
+│   ├── layout.tsx
+│   ├── page.tsx                  # root — login or dashboard
 │   └── globals.css
 ├── components/
-│   ├── ui/                   # shadcn/ui primitives
-│   ├── login-screen.tsx      # Twitter + wallet connect
-│   ├── mining-dashboard.tsx  # Main tap-to-mine arena
-│   ├── miner-visual.tsx      # Bitcoin ASIC SVG with animated fan
-│   └── miner-store.tsx       # 5-tier store + payment flow
-└── lib/
-    ├── miners.ts             # 5 miner tier configs
-    ├── economy.ts            # Bitcoin halving + energy + passive income
-    ├── store.ts              # Zustand session
-    ├── server.ts             # Global block height helpers
-    └── db.ts                 # Prisma client
+│   ├── miner-visual.tsx          # bitcoin ASIC SVG rig with animated fan
+│   ├── login-screen.tsx
+│   ├── miner-store.tsx           # 5-tier purchase flow
+│   └── mining-dashboard.tsx      # main game screen
+├── lib/
+│   ├── miners.ts                 # 5 tier configs + receiver address
+│   ├── economy.ts                # bitcoin halving + energy + passive model
+│   ├── server.ts                 # global block state helpers
+│   ├── store.ts                  # zustand session store
+│   └── db.ts                     # prisma client (auto SQLite/libSQL)
+└── prisma/
+    └── schema.prisma             # User / Miner / MiningRecord / Payment / GlobalState
 ```
 
 ---
 
-## Ritual Protocol
+## 🔐 Environment Variables
 
-- **Receiver address:** `0x29337E84E6bD3C6cC1B766ab9E69CDF5BBb5AC7d`
-- **Off-chain points:** Ritual BTC is awarded as satoshis stored in our database, not as on-chain tokens. Future versions may add a claim-to-chain bridge.
-- **Halving schedule:** every 21,000 global taps (blocks), reward is cut in half.
+| Name                    | Required | Description                                   |
+|-------------------------|----------|-----------------------------------------------|
+| `DATABASE_URL`          | Yes      | `file:./db/custom.db` (local) or `libsql://...` (Turso) |
+| `DATABASE_AUTH_TOKEN`   | Turso only | Turso auth token (JWT)                      |
 
 ---
 
-Built for the Ritual community. Tap hard, hodl harder. ⛏️
+## 🎮 How to Play
+
+1. Open the app → enter your **Twitter ID** and connect your **wallet**
+2. You'll receive a free **Genesis S1** miner automatically
+3. **Tap the rig** to mine Ritual BTC — each tap = 1 global block
+4. Energy depletes as you tap; it regenerates +1 every 12 seconds
+5. Buy higher-tier miners (S2 → S21) by sending RITUAL tokens to the protocol address shown in-app
+6. Paid miners earn **passive income** even when you're away — claim anytime
+7. Watch your rank on the global leaderboard
+8. Every 21,000 blocks the block reward **halves** — get in early!
+
+---
+
+## ⚠️ Notes
+
+- Ritual BTC is an **off-chain point system** — it is NOT a real cryptocurrency and is not transferable on-chain
+- Real RITUAL token payments for miner purchases go to the protocol address shown in-app
+- One Twitter ID + one wallet = one account (enforced server-side)
+- Vercel's serverless filesystem is read-only in production, which is why we use Turso (libSQL) for the database instead of a local SQLite file
+
+---
+
+## 📜 License
+
+MIT — do whatever you want, just don't blame us when your S21 burns a hole in your screen.
+
+---
+
+Built with ⚡ by the Ritual mining community.
