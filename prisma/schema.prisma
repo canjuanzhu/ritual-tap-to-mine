@@ -1,0 +1,84 @@
+// Ritual Tap-to-Mine — Prisma schema
+// Bitcoin-style economy: 5 miner tiers, halving rewards, energy system
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  twitterId     String   @unique
+  walletAddress String   @unique
+  totalRitualBtc Float   @default(0) // off-chain points, formatted as BTC-style satoshis
+  totalTaps     Int      @default(0)
+  energy        Int      @default(100) // 0-100, regenerates over time
+  lastEnergyAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  miners        Miner[]
+  records       MiningRecord[]
+  payments      Payment[]
+}
+
+model Miner {
+  id          String   @id @default(cuid())
+  userId      String
+  tier        String   // "S1" | "S2" | "S9" | "S19" | "S21"
+  hashPower   Int      // TH/s
+  isFree      Boolean  @default(false)
+  active      Boolean  @default(true)
+  purchasedAt DateTime @default(now())
+  lastClaimAt DateTime @default(now()) // for passive income calculation
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  records     MiningRecord[]
+
+  @@index([userId])
+}
+
+model MiningRecord {
+  id            String   @id @default(cuid())
+  userId        String
+  minerId       String?
+  minerTier     String   // denormalized for fast display
+  ritualBtcWon  Float    // reward this tap
+  action        String   // "tap" | "auto" | "halving_bonus"
+  blockHeight   Int      // global block height when mined
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  miner         Miner?   @relation(fields: [minerId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([blockHeight])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  userId        String
+  tier          String
+  amountRitual  Float    // 0.1 / 0.2 / 0.3 / 0.4
+  toAddress     String   // 0x29337E84E6bD3C6cC1B766ab9E69CDF5BBb5AC7d
+  fromAddress   String
+  txHash        String?  // user-pasted or auto-generated mock
+  status        String   @default("confirmed") // for demo: instantly confirmed
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Global state for bitcoin-style economy: block height + halving era
+model GlobalState {
+  id            Int      @id @default(1)
+  blockHeight   Int      @default(0) // every tap = 1 block globally
+  halvingEra    Int      @default(0) // 0 = 50 reward, 1 = 25, 2 = 12.5, ...
+  totalSupply   Float    @default(0) // total ritual btc minted (cap 21M)
+}
