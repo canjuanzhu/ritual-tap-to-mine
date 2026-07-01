@@ -8,40 +8,71 @@ import { Input } from "@/components/ui/input";
 import { useSession } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 
+// OKX wallet injects itself as window.okxwallet (ETH chain) — same EIP-1193 API
+type EIP1193Provider = {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+};
+
+declare global {
+  interface Window {
+    ethereum?: EIP1193Provider & { isMetaMask?: boolean; isOKXWallet?: boolean };
+    okxwallet?: EIP1193Provider & { isOKXWallet?: boolean };
+  }
+}
+
 export function LoginScreen() {
   const { setUser } = useSession();
   const { toast } = useToast();
   const [twitterId, setTwitterId] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
-  const [connecting, setConnecting] = useState(false);
+  const [connectingWallet, setConnectingWallet] = useState<"metamask" | "okx" | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function connectWallet() {
-    setConnecting(true);
-    const eth = (window as unknown as { ethereum?: any }).ethereum;
-    if (eth) {
-      try {
-        const accounts: string[] = await eth.request({
-          method: "eth_requestAccounts",
-        });
-        if (accounts[0]) {
-          setWalletAddress(accounts[0]);
-          toast({ title: "Wallet connected", description: accounts[0].slice(0, 10) + "..." });
-        }
-      } catch {
+  async function connectWallet(type: "metamask" | "okx") {
+    setConnectingWallet(type);
+    try {
+      let provider: EIP1193Provider | null = null;
+      let label = "";
+
+      if (type === "okx") {
+        // OKX wallet injects as window.okxwallet (preferred) OR window.ethereum with isOKXWallet flag
+        provider = window.okxwallet || (window.ethereum?.isOKXWallet ? window.ethereum : null);
+        label = "OKX Wallet";
+      } else {
+        // MetaMask injects as window.ethereum (with isMetaMask flag)
+        provider = window.ethereum || null;
+        label = "MetaMask";
+      }
+
+      if (!provider) {
         toast({
-          title: "Wallet connection rejected",
-          description: "Enter your wallet address manually below.",
+          title: `${label} not found`,
+          description: type === "okx"
+            ? "Install OKX Wallet extension from okx.com/wallet, or paste your 0x... address manually."
+            : "Install MetaMask extension, or paste your 0x... address manually.",
           variant: "destructive",
         });
+        setConnectingWallet(null);
+        return;
       }
-    } else {
+
+      const accounts = await provider.request({ method: "eth_requestAccounts" }) as string[];
+      if (accounts && accounts[0]) {
+        setWalletAddress(accounts[0]);
+        toast({
+          title: `${label} connected`,
+          description: accounts[0].slice(0, 8) + "..." + accounts[0].slice(-4),
+        });
+      }
+    } catch (err) {
       toast({
-        title: "No wallet extension found",
-        description: "Paste your 0x... address manually.",
+        title: "Wallet connection rejected",
+        description: "Enter your wallet address manually below.",
+        variant: "destructive",
       });
+    } finally {
+      setConnectingWallet(null);
     }
-    setConnecting(false);
   }
 
   async function submit() {
@@ -141,20 +172,38 @@ export function LoginScreen() {
                 placeholder="0x..."
                 className="bg-black border-zinc-800 font-mono text-xs text-white placeholder:text-zinc-600"
               />
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2 w-full border-zinc-800 hover:bg-zinc-900 text-zinc-300"
-                onClick={connectWallet}
-                disabled={connecting}
-              >
-                {connecting ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Wallet className="size-3.5" />
-                )}
-                {connecting ? "Connecting..." : "Connect Wallet (MetaMask)"}
-              </Button>
+
+              {/* Wallet connect buttons — MetaMask + OKX side by side */}
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-zinc-800 hover:bg-zinc-900 text-zinc-300 gap-1.5 h-9"
+                  onClick={() => connectWallet("metamask")}
+                  disabled={connectingWallet !== null}
+                >
+                  {connectingWallet === "metamask" ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <FoxIcon className="size-3.5" />
+                  )}
+                  <span className="text-[11px] font-mono">MetaMask</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-zinc-800 hover:bg-zinc-900 text-zinc-300 gap-1.5 h-9"
+                  onClick={() => connectWallet("okx")}
+                  disabled={connectingWallet !== null}
+                >
+                  {connectingWallet === "okx" ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <OKXIcon className="size-3.5" />
+                  )}
+                  <span className="text-[11px] font-mono">OKX Wallet</span>
+                </Button>
+              </div>
             </div>
 
             <Button
@@ -189,5 +238,52 @@ export function LoginScreen() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+/* ===== Inline wallet brand icons (SVG) ===== */
+
+function FoxIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20.5 4L13.5 9.2L14.8 5.8L20.5 4Z" fill="#E2761B"/>
+      <path d="M3.5 4L10.4 9.25L9.2 5.8L3.5 4Z" fill="#E4761B"/>
+      <path d="M18 16.3L16.15 19.1L20.1 20.2L21.25 16.4L18 16.3Z" fill="#E4761B"/>
+      <path d="M2.75 16.4L3.9 20.2L7.85 19.1L6 16.3L2.75 16.4Z" fill="#E4761B"/>
+      <path d="M7.6 11.4L6.5 13.1L10.4 13.3L10.25 9.05L7.6 11.4Z" fill="#E4761B"/>
+      <path d="M16.4 11.4L13.7 9L13.6 13.3L17.5 13.1L16.4 11.4Z" fill="#E4761B"/>
+      <path d="M7.85 19.1L10.1 18L8.15 16.45L7.85 19.1Z" fill="#E4761B"/>
+      <path d="M13.9 18L16.15 19.1L15.85 16.45L13.9 18Z" fill="#E4761B"/>
+      <path d="M16.15 19.1L13.9 18L14.1 19.65L14.05 20.15L16.15 19.1Z" fill="#D7C1B3"/>
+      <path d="M7.85 19.1L9.95 20.15L9.9 19.65L10.1 18L7.85 19.1Z" fill="#D7C1B3"/>
+      <path d="M10 15.4L8.1 14.85L9.45 14.25L10 15.4Z" fill="#233447"/>
+      <path d="M14 15.4L14.55 14.25L15.9 14.85L14 15.4Z" fill="#233447"/>
+      <path d="M7.85 19.1L8.15 16.45L6 16.4L7.85 19.1Z" fill="#CD6116"/>
+      <path d="M15.85 16.45L16.15 19.1L18 16.4L15.85 16.45Z" fill="#CD6116"/>
+      <path d="M10.4 13.3L6.5 13.1L8.1 14.85L10 15.4L10.4 13.3Z" fill="#E4751F"/>
+      <path d="M13.6 13.3L14 15.4L15.9 14.85L17.5 13.1L13.6 13.3Z" fill="#E4751F"/>
+      <path d="M10.4 13.3L10 15.4L10.45 17.7L10.6 13.85L10.4 13.3Z" fill="#F6851B"/>
+      <path d="M13.6 13.3L13.4 13.85L13.55 17.7L14 15.4L13.6 13.3Z" fill="#F6851B"/>
+      <path d="M14 15.4L13.55 17.7L13.9 18L15.85 16.45L14 15.4Z" fill="#F6851B"/>
+      <path d="M10 15.4L8.15 16.45L10.1 18L10.45 17.7L10 15.4Z" fill="#F6851B"/>
+      <path d="M9.95 20.15L10 19.65L9.85 19.5H8.05L9.95 20.15Z" fill="#C0AD9E"/>
+      <path d="M14.05 20.15L15.95 19.5H14.15L14 19.65L14.05 20.15Z" fill="#C0AD9E"/>
+      <path d="M14.1 19.65L13.9 18L10.1 18L9.9 19.65L10.05 19.5H9.95L14.05 19.5L14.1 19.65Z" fill="#763D16"/>
+      <path d="M20.1 20.2L20.7 17.5L18.5 16.4L20.1 20.2Z" fill="#E4751F"/>
+      <path d="M3.3 17.5L3.9 20.2L5.5 16.4L3.3 17.5Z" fill="#E4751F"/>
+      <path d="M9.55 13.3L8.1 14.85L8.15 16.45L9.55 13.3Z" fill="#E4751F"/>
+      <path d="M15.85 16.45L15.9 14.85L14.45 13.3L15.85 16.45Z" fill="#E4751F"/>
+      <path d="M17.5 13.1L13.6 13.3L14.45 13.3L15.9 14.85L17.5 13.1Z" fill="#E4751F"/>
+      <path d="M6.5 13.1L8.1 14.85L9.55 13.3L6.5 13.1Z" fill="#E4751F"/>
+    </svg>
+  );
+}
+
+function OKXIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="24" height="24" rx="4" fill="#000"/>
+      <path d="M9.5 6H6.5C6.224 6 6 6.224 6 6.5V17.5C6 17.776 6.224 18 6.5 18H9.5C9.776 18 10 17.776 10 17.5V14.5C10 14.224 10.224 14 10.5 14H13.5C13.776 14 14 14.224 14 14.5V17.5C14 17.776 14.224 18 14.5 18H17.5C17.776 18 18 17.776 18 17.5V6.5C18 6.224 17.776 6 17.5 6H14.5C14.224 6 14 6.224 14 6.5V9.5C14 9.776 13.776 10 13.5 10H10.5C10.224 10 10 9.776 10 9.5V6.5C10 6.224 9.776 6 9.5 6Z" fill="#fff"/>
+    </svg>
   );
 }

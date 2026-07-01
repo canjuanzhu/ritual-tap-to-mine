@@ -46,6 +46,7 @@ interface MinerStoreProps {
   tiers: MinerTierInfo[];
   onChanged: () => void;
   onClose: () => void;
+  isIntro?: boolean; // true when shown as first-login intro
 }
 
 export function MinerStore({
@@ -55,6 +56,7 @@ export function MinerStore({
   tiers,
   onChanged,
   onClose,
+  isIntro = false,
 }: MinerStoreProps) {
   const { toast } = useToast();
   const [buyingTier, setBuyingTier] = useState<MinerTier | null>(null);
@@ -273,16 +275,20 @@ export function MinerStore({
             })}
           </div>
 
-          {/* Bottom CTA */}
-          <div className="text-center mt-6">
+          {/* Bottom CTA — big START MINING button */}
+          <div className="text-center mt-8">
             <Button
-              variant="outline"
               onClick={onClose}
-              className="border-zinc-800 bg-zinc-950 hover:bg-zinc-900 text-white gap-2"
+              className="bg-emerald-500 hover:bg-emerald-400 text-black font-black gap-2 h-12 px-8 text-sm tracking-wider"
             >
-              <ArrowLeft className="size-4" />
-              <span className="font-bold text-xs tracking-wider">BACK TO MINE</span>
+              <Zap className="size-4" fill="currentColor" />
+              {isIntro ? "START MINING →" : "BACK TO MINE"}
             </Button>
+            {isIntro && (
+              <p className="text-[10px] text-zinc-500 font-mono mt-2">
+                Your free S1 miner is ready · tap to start earning Ritual BTC
+              </p>
+            )}
           </div>
         </motion.div>
       </div>

@@ -112,6 +112,7 @@ export function MiningDashboard() {
   const [showStore, setShowStore] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showRecords, setShowRecords] = useState(false);
+  const [hasSeenStoreIntro, setHasSeenStoreIntro] = useState(false);
   const [tapping, setTapping] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [floatingRewards, setFloatingRewards] = useState<FloatingReward[]>([]);
@@ -181,6 +182,21 @@ export function MiningDashboard() {
     loadRecords();
     loadLeaderboard();
   }, [loadStats, loadRecords, loadLeaderboard]);
+
+  // ===== FIRST-LOGIN STORE INTRO =====
+  // After login, auto-open the miner store so user picks/sees their miner first.
+  // Only show once per Twitter handle (tracked in localStorage).
+  useEffect(() => {
+    if (!stats || showStore) return;
+    const twitterId = stats.user.twitterId;
+    const seenKey = `ritual-store-intro-${twitterId}`;
+    const hasSeen = localStorage.getItem(seenKey) === "1";
+    if (!hasSeen) {
+      setShowStore(true);
+      setHasSeenStoreIntro(true);
+      localStorage.setItem(seenKey, "1");
+    }
+  }, [stats, showStore]);
 
   // periodic refresh
   useEffect(() => {
@@ -528,15 +544,15 @@ export function MiningDashboard() {
                       </button>
                     </div>
                   </div>
-                  <div className="pt-2 border-t border-zinc-800 flex items-center justify-end">
+                  <div className="pt-2 border-t border-zinc-800">
                     <button
                       onClick={() => {
                         setWalletMenuOpen(false);
                         logout();
                       }}
-                      className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 hover:text-red-400 transition-colors"
+                      className="w-full flex items-center justify-center gap-1.5 text-[11px] font-mono font-bold text-zinc-300 hover:text-white bg-zinc-900 hover:bg-red-950/50 border border-zinc-800 hover:border-red-800 rounded-md py-2 transition-colors"
                     >
-                      <LogOut className="size-3" /> DISCONNECT
+                      <LogOut className="size-3.5" /> EXIT TO LOGIN
                     </button>
                   </div>
                 </div>
@@ -842,7 +858,11 @@ export function MiningDashboard() {
               loadStats();
               loadLeaderboard();
             }}
-            onClose={() => setShowStore(false)}
+            onClose={() => {
+              setShowStore(false);
+              setHasSeenStoreIntro(false);
+            }}
+            isIntro={hasSeenStoreIntro}
           />
         )}
       </AnimatePresence>
